@@ -123,7 +123,7 @@ class Auth {
 	/**
 	 * Current user record
 	 */
-	public function current_user_record() {
+	public function current_user() {
 		return $this->user_record;
 	}
 
