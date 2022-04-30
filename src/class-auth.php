@@ -415,97 +415,150 @@ class Auth {
 	 * @throws \Exception $e Errors.
 	 */
 	public function authenticate_user( $email, $password ) {
-		if ( empty( $email ) || empty( $password ) ) {
-			throw new \Exception( 'Either email or password not provided.', 400 );
-		}
-
-		$email = trim( $email );
-
-		$this->user_record = $this->auth->SignInWithEmailAndPassword( $email, $password );
-
-		// If Firebase finds a record this will be true.
-		if ( false === $this->user_record ) {
-			throw new \Exception( sprintf( 'Could not sign in %s with Firebase.', $email ), 400 );
-		}
-
-		$id_token = $this->user_record->idToken();
-
-		if ( empty( $id_token ) ) {
-			throw new \Exception( sprintf( 'No ID token for %s.', $email ), 400 );
-		}
-
-		$session_cookie_string = $this->auth->createSessionCookie( $id_token, $this->session_timestamp );
-
-		if ( empty( $session_cookie_string ) ) {
-			throw new \Exception( 'No session cookie string.', 400 );
-		}
-
 		try {
-			$session_token  = $this->parse_session_cookie( $session_cookie_string );
-		} catch ( \Exception $e ) {
-			// TODO: Log error.
-		}
-
-		$parsed_id_token = $jwt_config->parser()->parse( $id_token );
-
-		if ( ! $parsed_id_token instanceof \Lcobucci\JWT\UnencryptedToken ) {
-			throw new \Exception( 'Parsed ID token is not an UnecryptedToken', 400 );
-		}
-
-		$id_token_auth_time = $parsed_id_token->claims()->get( 'auth_time' );
-
-		$constraints = $jwt_config->validationConstraints();
-
-		if ( ! $session_token->headers()->has( 'kid' ) ) {
-			throw new \Exception( 'Token does not have a kid', 110 );
-		}
-
-		$session_token_kid = $session_token->headers()->get( 'kid' );
-
-		$google_public_keys_response = wp_remote_get( 'https://www.googleapis.com/identitytoolkit/v3/relyingparty/publicKeys' );
-
-		$google_public_key = '';
-
-		if ( ! empty( $google_public_keys_response['body'] ) ) {
-			$google_public_keys = json_decode( $google_public_keys_response['body'] );
-
-			if ( ! empty( $google_public_keys->{$session_token_kid} ) ) {
-				$google_public_key = $google_public_keys->{$session_token_kid};
-			} else {
-				throw new \Exception( 'kid cannot be found in Google public keys', 400 );
+			if ( empty( $email ) || empty( $password ) ) {
+				throw new \Exception( 'Either email or password not provided.', 400 );
 			}
-		} else {
-			throw new \Exception( 'Cannot get Google public keys', 400 );
+
+			$email = trim( $email );
+
+			$this->user_record = $this->auth->SignInWithEmailAndPassword( $email, $password );
+
+			// If Firebase finds a record this will be true.
+			if ( false === $this->user_record ) {
+				throw new \Exception( sprintf( 'Could not sign in %s with Firebase.', $email ), 400 );
+			}
+
+			$id_token = $this->user_record->idToken();
+
+			if ( empty( $id_token ) ) {
+				throw new \Exception( sprintf( 'No ID token for %s.', $email ), 400 );
+			}
+
+			$session_cookie_string = $this->auth->createSessionCookie( $id_token, $this->session_timestamp );
+
+			if ( empty( $session_cookie_string ) ) {
+				throw new \Exception( 'No session cookie string', 400 );
+			}
+
+			$config_encoded_json_string = file_get_contents( $this->google_service_account_config_path );
+
+			if ( false === $config_encoded_json_string ) {
+				throw new \Exception( 'Could not read Google service account configuration file', 400 );
+			}
+
+			$config_json_string = json_decode( $config_encoded_json_string );
+
+			if ( null === $config_json_string ) {
+				throw new \Exception( 'Google service account JSON could not be decoded into a JSON object', 400 );
+			}
+
+			if ( ! empty( $config_json_string->project_id ) ) {
+				$this->project_id = $config_json_string->project_id;
+			}
+
+			if ( null === $this->project_id ) {
+				throw new \Exception( 'Google Firebase project ID is not defined in the Google service account JSON file', 400 );
+			}
+
+			$private_key = '';
+
+			if ( ! empty( $config_json_string->private_key ) ) {
+				$private_key = str_replace( "\n", '', $config_json_string->private_key );
+				$private_key = str_replace( '-----BEGIN PRIVATE KEY-----', '', $private_key );
+				$private_key = str_replace( '-----END PRIVATE KEY-----', '', $private_key );
+			} else {
+				throw new \Exception( 'Google service account does not have a private key', 400 );
+			}
+
+			$signer = new \Lcobucci\JWT\Signer\Rsa\Sha256();
+
+			$jwt_config = \Lcobucci\JWT\Configuration::forSymmetricSigner(
+				$signer,
+				\Lcobucci\JWT\Signer\Key\InMemory::base64Encoded( $private_key )
+			);
+
+			if ( ! $jwt_config instanceof \Lcobucci\JWT\Configuration ) {
+				throw new \Exception( 'No JWT configuration', 400 );
+			}
+
+			$session_token = $jwt_config->parser()->parse( $session_cookie_string );
+			if ( ! $session_token instanceof \Lcobucci\JWT\UnencryptedToken ) {
+				throw new \Exception( 'JWT is not an UnecryptedToken', 400 );
+			}
+
+			$parsed_id_token = $jwt_config->parser()->parse( $id_token );
+
+			if ( ! $parsed_id_token instanceof \Lcobucci\JWT\UnencryptedToken ) {
+				throw new \Exception( 'Parsed ID token is not an UnecryptedToken', 400 );
+			}
+
+			$id_token_auth_time = $parsed_id_token->claims()->get( 'auth_time' );
+
+			$constraints = $jwt_config->validationConstraints();
+
+			if ( ! $session_token->headers()->has( 'kid' ) ) {
+				throw new \Exception( 'Token does not have a kid', 110 );
+			}
+
+			$session_token_kid = $session_token->headers()->get( 'kid' );
+
+			$google_public_keys_response = wp_remote_get( 'https://www.googleapis.com/identitytoolkit/v3/relyingparty/publicKeys' );
+
+			$google_public_key = '';
+
+			if ( ! empty( $google_public_keys_response['body'] ) ) {
+				$google_public_keys = json_decode( $google_public_keys_response['body'] );
+
+				if ( ! empty( $google_public_keys->{$session_token_kid} ) ) {
+					$google_public_key = $google_public_keys->{$session_token_kid};
+				} else {
+					throw new \Exception( 'kid cannot be found in Google public keys', 400 );
+				}
+			} else {
+				throw new \Exception( 'Cannot get Google public keys', 400 );
+			}
+
+			$firebase_uid = $this->user_record->firebaseUserId();
+			$clock        = \Lcobucci\Clock\SystemClock::fromUTC();
+
+			$session_token_auth_time = $session_token->claims()->get( 'auth_time' );
+
+			try {
+				$constraint_iss       = new \Lcobucci\JWT\Validation\Constraint\IssuedBy( 'https://session.firebase.google.com/' . $this->project_id );
+				$constraint_aud       = new \Lcobucci\JWT\Validation\Constraint\PermittedFor( $this->project_id );
+				$constraint_alg_kid   = new \Lcobucci\JWT\Validation\Constraint\SignedWith( $signer, \Lcobucci\JWT\Signer\Key\InMemory::plainText( $google_public_key ) );
+				$constraint_exp_iat   = new \Lcobucci\JWT\Validation\Constraint\StrictValidAtForFirebase( $clock );
+				$constraint_sub       = new \Lcobucci\JWT\Validation\Constraint\RelatedTo( $firebase_uid );
+				$constraint_auth_time = new \Lcobucci\JWT\Validation\Constraint\AuthTime( $id_token_auth_time );
+
+				$validate = $jwt_config->validator()->validate(
+					$session_token,
+					$constraint_iss,
+					$constraint_aud,
+					$constraint_alg_kid,
+					$constraint_exp_iat,
+					$constraint_sub,
+					$constraint_auth_time
+				);
+			} catch ( \Exception $e ) {
+				// var_dump( $e->getMessage() );
+				// TODO: Log error.
+			}
+
+			if ( ! $validate ) {
+				throw new \RuntimeException( 'JWT constraints did not pass', 400 );
+			}
+
+			$_SESSION['user_auth'] = $session_cookie_string;
+			$this->is_authorized   = true;
+		} catch ( \RuntimeException $e ) {
+			// TODO: Log errors.
+			// var_dump( $e->getMessage() );
+		} catch ( \Exception $e ) {
+			// TODO: Log errors.
+			// var_dump( $e->getMessage() );
 		}
-
-		$firebase_uid = $this->user_record->firebaseUserId();
-		$clock        = \Lcobucci\Clock\SystemClock::fromUTC();
-
-		$session_token_auth_time = $session_token->claims()->get( 'auth_time' );
-
-		$constraint_iss       = new \Lcobucci\JWT\Validation\Constraint\IssuedBy( 'https://session.firebase.google.com/gemini-made-319812' );
-		$constraint_aud       = new \Lcobucci\JWT\Validation\Constraint\PermittedFor( $this->project_id );
-		$constraint_alg_kid   = new \Lcobucci\JWT\Validation\Constraint\SignedWith( $signer, \Lcobucci\JWT\Signer\Key\InMemory::plainText( $google_public_key ) );
-		$constraint_exp_iat   = new \Lcobucci\JWT\Validation\Constraint\StrictValidAtForFirebase( $clock );
-		$constraint_sub       = new \Lcobucci\JWT\Validation\Constraint\RelatedTo( $firebase_uid );
-		$constraint_auth_time = new \Lcobucci\JWT\Validation\Constraint\AuthTime( $id_token_auth_time );
-
-		$validate = $jwt_config->validator()->validate(
-			$session_token,
-			$constraint_iss,
-			$constraint_aud,
-			$constraint_alg_kid,
-			$constraint_exp_iat,
-			$constraint_sub,
-			$constraint_auth_time
-		);
-
-		if ( ! $validate ) {
-			throw new \RuntimeException( 'JWT constraints did not pass', 400 );
-		}
-
-		$_SESSION['user_auth'] = $session_cookie_string;
-		$this->is_authorized   = true;
 	}
 
 	/**
@@ -513,7 +566,7 @@ class Auth {
 	 */
 	public function remove_user_authentication() {
 		unset( $_SESSION['user_auth'] );
-		session_destroy( true );
+		session_destroy();
 
 		$this->is_authorized = false;
 	}
