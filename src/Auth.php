@@ -1,13 +1,13 @@
 <?php
 /**
- * Auth is a controller class for interfacing with Kreait and Firebase
+ * Auth is a controller class for interfacing with Firebase using Kreait.
  *
  * @package WPFirebaseAuth
  * @author  Steven Wett <stevenwett@gmail.com>
  * @version 0.0.1
  */
 
-namespace WPFirebaseAuth;
+namespace Stevenwett\WPFirebaseAuth;
 
 if (! defined('ABSPATH')) {
 	die();
