@@ -9,11 +9,11 @@
 
 namespace Stevenwett\WPFirebaseAuth;
 
-if (! defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) || ! defined( 'ROOTPATH' ) ) {
 	die();
 }
 
-// TODO: Set ROOTPATH.
+define( 'PRIVATEPATH', ROOTPATH . '/private' );
 
 use \Kreait\Firebase\Factory;
 use \Kreait\Firebase\ServiceAccount;
@@ -37,18 +37,11 @@ class Auth {
 	private $google_service_account_config_path;
 
 	/**
-	 * Firebase project ID
-	 *
-	 * @var string $project_id Firebase project ID.
-	 */
-	private $project_id = null;
-
-	/**
 	 * Session time
 	 *
 	 * @var int $session_timestamp Session time in seconds.
 	 */
-	private $session_timestamp = 86400 * 14; // Two weeks.
+	private $session_timestamp = WEEK_IN_SECONDS * 2;
 
 	/**
 	 * Current user record.
@@ -88,7 +81,7 @@ class Auth {
 
 		// Setting up the Kreait Firebase factory.
 		$factory                                  = new \Kreait\Firebase\Factory();
-		$this->google_service_account_config_path = ROOTPATH . '/google-service-account.json';
+		$this->google_service_account_config_path = PRIVATEPATH . '/google-service-account.json';
 
 		$service_account = $factory->withServiceAccount( $this->google_service_account_config_path );
 		$this->auth      = $service_account->createAuth();
@@ -115,47 +108,17 @@ class Auth {
 	}
 
 	/**
-	 * Registering endpoints using the WordPress REST API
+	 * Current authorization status
 	 */
-	public function register_auth_endpoints() {
-	}
-
-	/**
-	 * Endpoint permissions for authenticated users
-	 */
-	public function endpoint_permissions_authenticated_users() {
+	public function is_authorized() {
 		return $this->is_authorized;
 	}
 
 	/**
-	 * Endpoint permissions for the public.
+	 * Current user record
 	 */
-	public function endpoint_permissions_public() {
-		return true;
-	}
-
-	/**
-	 * Verify a hash
-	 *
-	 * @param string $string A string to verify the hash against.
-	 * @param string $hash Hash.
-	 */
-	public static function verify_hash( $string, $hash ) {
-		$test_hash = sha1( (string) $string . wp_salt() );
-
-		if ( strtolower( $hash ) === $test_hash ) {
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Get a hash;
-	 *
-	 * @param string $string A string.
-	 */
-	public static function get_hash( $string ) {
-		return sha1( (string) $string . wp_salt() );
+	public function current_user_record() {
+		return $this->user_record;
 	}
 
 	/**
@@ -168,7 +131,7 @@ class Auth {
 	 */
 	public function create_token( $data, $expires = 3600 ) {
 		try {
-			$private_key = \Lcobucci\JWT\Signer\Key\InMemory::file( ROOTPATH . '/jwtRS256.key' );
+			$private_key = \Lcobucci\JWT\Signer\Key\InMemory::file( PRIVATEPATH . '/jwtRS256.key' );
 			$signer      = new \Lcobucci\JWT\Signer\Rsa\Sha256();
 			$jwt_config  = \Lcobucci\JWT\Configuration::forSymmetricSigner(
 				$signer,
@@ -223,8 +186,8 @@ class Auth {
 	 */
 	public function parse_token( $token_string ) {
 		try {
-			$private_key = \Lcobucci\JWT\Signer\Key\InMemory::file( ROOTPATH . '/jwtRS256.key' );
-			$public_key  = \Lcobucci\JWT\Signer\Key\InMemory::file( ROOTPATH . '/jwtRS256.key.pub' );
+			$private_key = \Lcobucci\JWT\Signer\Key\InMemory::file( PRIVATEPATH . '/jwtRS256.key' );
+			$public_key  = \Lcobucci\JWT\Signer\Key\InMemory::file( PRIVATEPATH . '/jwtRS256.key.pub' );
 			$signer      = new \Lcobucci\JWT\Signer\Rsa\Sha256();
 			$jwt_config  = \Lcobucci\JWT\Configuration::forSymmetricSigner(
 				$signer,
@@ -421,5 +384,49 @@ class Auth {
 		}
 
 		return false;
+	}
+
+	// /**
+	//  * Verify a hash
+	//  *
+	//  * @param string $string A string to verify the hash against.
+	//  * @param string $hash Hash.
+	//  */
+	// public static function verify_hash( $string, $hash ) {
+	// 	$test_hash = sha1( (string) $string . wp_salt() );
+
+	// 	if ( strtolower( $hash ) === $test_hash ) {
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
+
+	// /**
+	//  * Get a hash;
+	//  *
+	//  * @param string $string A string.
+	//  */
+	// public static function get_hash( $string ) {
+	// 	return sha1( (string) $string . wp_salt() );
+	// }
+
+	/**
+	 * Registering endpoints using the WordPress REST API
+	 */
+	public function register_auth_endpoints() {
+	}
+
+	/**
+	 * Endpoint permissions for authenticated users
+	 */
+	public function endpoint_permissions_authenticated_users() {
+		return $this->is_authorized;
+	}
+
+	/**
+	 * Endpoint permissions for the public.
+	 */
+	public function endpoint_permissions_public() {
+		return true;
 	}
 }
