@@ -72,22 +72,28 @@ class Auth {
 	 * @param bool $init               Whether this is the initialization instance.
 	 */
 	public function __construct( $start_auth_session = false, $init = false ) {
-		require_once '../includes/firebase-auth/class-strictvalidatforfirebase.php';
-		require_once '../includes/firebase-auth/class-authtime.php';
+		require_once __DIR__ . '/../includes/firebase-auth/class-strictvalidatforfirebase.php';
+		require_once __DIR__ . '/../includes/firebase-auth/class-authtime.php';
 
 		if ( $init ) {
 			add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 		}
 
-		// Setting up the Kreait Firebase factory.
-		$factory                                  = new \Kreait\Firebase\Factory();
-		$this->google_service_account_config_path = PRIVATEPATH . '/google-service-account.json';
+		try {
+			// Setting up the Kreait Firebase factory.
+			$factory                                  = new \Kreait\Firebase\Factory();
+			$this->google_service_account_config_path = PRIVATEPATH . '/google-service-account.json';
 
-		$service_account = $factory->withServiceAccount( $this->google_service_account_config_path );
-		$this->auth      = $service_account->createAuth();
+			$service_account = $factory->withServiceAccount( $this->google_service_account_config_path );
+			$this->auth      = $service_account->createAuth();
+		} catch ( \Kreait\Firebase\Exception\InvalidArgumentException $e ) {
+			// TODO: Log error.
+		} catch ( \Exception $e ) {
+			// TODO: Log error.
+		}
 
 		// Start the session.
-		if ( $start_session ) {
+		if ( $start_auth_session ) {
 			session_set_cookie_params( $this->session_timestamp );
 			session_start();
 		}
