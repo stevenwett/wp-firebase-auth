@@ -10,8 +10,17 @@
 * Instantiate the Auth controller
 
 ### Adding an RSA Token
+In terminal go to your /private directory and then use the following commands:
+```
+ssh-keygen -t rsa -b 4096 -m PEM -f jwtRS256.key
+# Don't add passphrase
+openssl rsa -in jwtRS256.key -pubout -outform PEM -out jwtRS256.key.pub
+```
 
 ### Adding a Google Service Account Config
+* Go into your project in the Firebase Console, go to Project settings (gear top right sidebar) and then Service accounts.
+* Click Generate new private key and it'll show you some json to copy. To see an example see #Example google-service-account.json
+* Add json to file named google-service-account.json that is in the /private folder.
 
 #### Example google-service-account.json
 ```json
