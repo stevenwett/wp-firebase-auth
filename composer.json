@@ -1,0 +1,30 @@
+{
+	"name": "wett/wp-firebase-auth",
+	"description": "An application layer for Firebase Auth",
+	"type": "library",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "stevenwett",
+			"email": "stevenwett@gmail.com"
+		}
+	],
+	"require": {
+		"php": "^7.4 || ^8.0",
+		"kreait/firebase-php": "5.21.0",
+		"lcobucci/jwt": "^4.1.4"
+	},
+	"require-dev": {
+		"squizlabs/php_codesniffer": "*",
+		"wp-coding-standards/wpcs": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"WpFirebaseAuth\\Auth\\": "src"
+		}
+	},
+	"config": {
+		"preferred-install": "dist",
+		"sort-packages": true
+	}
+}
