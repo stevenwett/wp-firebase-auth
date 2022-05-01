@@ -367,7 +367,7 @@ class Auth {
 			var_dump( $e->getMessage());
 			throw new \Exception( 'Could not update user password.', 400 );
 		}
-		var_dump('reset-password');
+		// var_dump('reset-password');
 
 		if ( ! empty( $updated_user ) ) {
 			return $updated_user;
