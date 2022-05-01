@@ -364,7 +364,7 @@ class Auth {
 
 		} catch ( \Kreait\Firebase\Exception\InvalidArgumentException $e ) {
 			// TODO: Log error.
-			var_dump( $e->getMessage());
+			// var_dump( $e->getMessage());
 			throw new \Exception( 'Could not update user password.', 400 );
 		}
 		// var_dump('reset-password');
