@@ -644,7 +644,7 @@ class Auth {
 		// The endpoint for logging a user in.
 		register_rest_route(
 			'wp-firebase-auth/v1',
-			'auth/login',
+			'/login',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'endpoint_callback_user_login' ),
@@ -655,7 +655,7 @@ class Auth {
 		// The endpoint for logging a user out.
 		register_rest_route(
 			'wp-firebase-auth/v1',
-			'/auth/logout',
+			'/logout',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'endpoint_callback_user_logout' ),
@@ -666,7 +666,7 @@ class Auth {
 		// The endpoint for resetting a user password.
 		register_rest_route(
 			'wp-firebase-auth/v1',
-			'/auth/reset_password',
+			'/reset_password',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'endpoint_callback_user_reset_password' ),
@@ -678,7 +678,7 @@ class Auth {
 		// TODO: Change these endpoint permissions.
 		register_rest_route(
 			'wp-firebase-auth/v1',
-			'/auth/forgot_password',
+			'/forgot_password',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'endpoint_callback_forgot_password' ),
