@@ -317,12 +317,16 @@ class Auth {
 	 * @param string $email Email address for the new user.
 	 */
 	private function create_firebase_user( $email = false ) {
-		if ( empty( $email ) ) {
-			return false;
-		}
+		try {
+			if ( empty( $email ) ) {
+				throw new \Exception( 'Need email.', 400 );
+			}
 
-		// Create a new firebase user with a random password.
-		$new_user = $this->auth->createUserWithEmailAndPassword( $email, utf8_encode( random_bytes( 50 ) ) );
+			// Create a new firebase user with a random password.
+			$new_user = $this->auth->createUserWithEmailAndPassword( $email, utf8_encode( random_bytes( 50 ) ) );
+		} catch ( \Exception $e ) {
+			// TODO: Log error.
+		}
 
 		if ( ! empty( $new_user ) ) {
 			return $new_user;
@@ -336,12 +340,17 @@ class Auth {
 	 * @param string $firebase_uid Firebase Unique ID.
 	 */
 	private function delete_firebase_user( $firebase_uid ) {
-		if ( empty( $firebase_uid ) ) {
-			return false;
-		}
+		try {
+			if ( empty( $firebase_uid ) ) {
+				throw new \Exception( 'Need firebase_uid.', 400 );
+			}
 
-		// Delete user from the $uid.
-		$this->auth->deleteUser( $firebase_uid );
+			// Delete user from the $uid.
+			$this->auth->deleteUser( $firebase_uid );
+		} catch ( \Exception $e ) {
+			// TODO: Log error.
+			// throw new \Exception();
+		}
 		return true;
 	}
 
@@ -364,7 +373,6 @@ class Auth {
 
 		} catch ( \Kreait\Firebase\Exception\InvalidArgumentException $e ) {
 			// TODO: Log error.
-			// var_dump( $e->getMessage());
 			throw new \Exception( 'Could not update user password.', 400 );
 		}
 		// var_dump('reset-password');
