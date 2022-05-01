@@ -363,6 +363,8 @@ class Auth {
 	 * @throws \Exception $e Errors.
 	 */
 	public function reset_password( $firebase_uid = null, $new_password = '' ) {
+		$error_message = '';
+
 		try {
 			if ( empty( $firebase_uid ) || '' === $new_password ) {
 				throw new \Exception( 'Need firebase_uid and password.', 400 );
@@ -373,12 +375,15 @@ class Auth {
 
 		} catch ( \Kreait\Firebase\Exception\InvalidArgumentException $e ) {
 			// TODO: Log error.
+			$error_message = $e->getMessage();
 			throw new \Exception( 'Could not update user password.', 400 );
 		}
-		// var_dump('reset-password');
 
 		if ( ! empty( $updated_user ) ) {
-			return $updated_user;
+			return array(
+				'message' => $error_message,
+				'user'    => $updated_user,
+			);
 		}
 
 		return false;
@@ -426,7 +431,9 @@ class Auth {
 	 *
 	 * @throws \Exception $e Errors.
 	 */
-	public function authenticate_user( $email, $password ) {
+	private function authenticate_user( $email, $password ) {
+		$error_response = '';
+
 		try {
 			if ( empty( $email ) || empty( $password ) ) {
 				throw new \Exception( 'Either email or password not provided.', 400 );
@@ -562,15 +569,38 @@ class Auth {
 				throw new \RuntimeException( 'JWT constraints did not pass', 400 );
 			}
 
+			// User is now authenticated.
 			$_SESSION['user_auth'] = $session_cookie_string;
 			$this->is_authorized   = true;
-		} catch ( \RuntimeException $e ) {
-			// TODO: Log errors.
-			// var_dump( $e->getMessage() );
+
+		} catch ( \Kreait\Firebase\Auth\SignIn\FailedToSignIn $e ) {
+			$error_response = json_decode( $e->response()->getBody() );
+
+			if ( ! empty( $error_response ) && ! empty( $error_response->error ) && ! empty( $error_response->error->code ) && is_numeric( $error_response->error->code ) ) {
+				// $response_code = (int) $error_response->error->code;
+			}
+
+			// TODO: Log error.
+
+			// if ( 'USER_DISABLED' === $e->getMessage() ) {
+			// 	$response_message = sprintf( 'Your account with email %s has been disabled.', $email );
+			// } elseif ( strpos( $e->getMessage(), 'TOO_MANY_ATTEMPTS' ) !== false ) {
+			// 	$response_message = 'Too many login attempts. You may reset your password to sign in or try again later.';
+			// } else {
+			// 	$response_message = 'Either your email or password is incorrect.';
+			// }
+		} catch ( \Kreait\Firebase\Auth\CreateSessionCookie\FailedToCreateSessionCookie $e ) {
+			// TODO: Log error.
+			$response_message = $e->getMessage();
+		} catch ( \Lcobucci\JWT\Validation\ConstraintViolation $e ) {
+			// TODO: Log error.
+			$response_message = $e->getMessage();
 		} catch ( \Exception $e ) {
-			// TODO: Log errors.
-			// var_dump( $e->getMessage() );
+			// TODO: Log error.
+			$response_message = $e->getMessage();
 		}
+
+		return $error_response;
 	}
 
 	/**
@@ -611,6 +641,51 @@ class Auth {
 	 * Registering endpoints using the WordPress REST API
 	 */
 	public function register_auth_endpoints() {
+		// The endpoint for logging a user in.
+		register_rest_route(
+			'wp-firebase-auth/v1',
+			'auth/login',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'endpoint_callback_user_login' ),
+				'permission_callback' => array( $this, 'endpoint_permissions_public' ),
+			)
+		);
+
+		// The endpoint for logging a user out.
+		register_rest_route(
+			'wp-firebase-auth/v1',
+			'/auth/logout',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'endpoint_callback_user_logout' ),
+				'permission_callback' => array( $this, 'endpoint_permissions_authenticated_users' ),
+			)
+		);
+
+		// The endpoint for resetting a user password.
+		register_rest_route(
+			'wp-firebase-auth/v1',
+			'/auth/reset_password',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'endpoint_callback_user_reset_password' ),
+				'permission_callback' => array( $this, 'endpoint_permissions_authenticated_users' ),
+			)
+		);
+
+		// The endpoint for resetting a user password.
+		// TODO: Change these endpoint permissions.
+		register_rest_route(
+			'wp-firebase-auth/v1',
+			'/auth/forgot_password',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'endpoint_callback_forgot_password' ),
+				'permission_callback' => array( $this, 'endpoint_permissions_public' ),
+			)
+		);
+
 	}
 
 	/**
@@ -625,5 +700,152 @@ class Auth {
 	 */
 	public function endpoint_permissions_public() {
 		return true;
+	}
+
+	/**
+	 * REST API endpoing callback function for logging in a user
+	 *
+	 * @param \WP_REST_Request $request request object.
+	 * @throws \Exception $e Errors.
+	 * @throws \RuntimeException $e Runtime errors.
+	 */
+	public function endpoint_callback_user_login( \WP_REST_Request $request ) {
+
+		$response_code    = 400;
+		$response_message = '';
+
+		try {
+			if ( empty( $request['email'] || empty( $request['password'] ) ) ) {
+				$response_message = 'Either email or password was empty.';
+				throw new \Exception( 'Could not find either email or password in the request.', 400 );
+			}
+
+			$response_message = $this->authenticate_user( $request['email'], $request['password'] );
+			$response_code    = 200;
+
+		} catch ( \Exception $e ) {
+			// TODO: Log errors.
+		}
+
+		if ( is_wp_error( $request ) ) {
+			$response_code    = 400;
+			$response_message = $request->get_error_message();
+		}
+
+		$response = new \WP_REST_Response(
+			array(
+				'message' => $response_message,
+			),
+			$response_code
+		);
+
+	}
+
+	/**
+	 * REST API endpoing callback function for user log Out.
+	 *
+	 * @param \WP_REST_Request $request request object.
+	 */
+	public function endpoint_callback_user_logout( \WP_REST_Request $request ) {
+		unset( $_SESSION['user_auth'] );
+
+		$response_code    = 400;
+		$response_message = '';
+
+		if ( ! isset( $_SESSION['user_auth'] ) ) {
+			$response_code    = 200;
+			$response_message = 'User signed out successfully.';
+		}
+
+		session_destroy();
+
+		if ( is_wp_error( $request ) ) {
+			$response_code    = 400;
+			$response_message = $request->get_error_message();
+		}
+
+		$response = new \WP_REST_Response(
+			array(
+				'message' => $response_message,
+			),
+			$response_code
+		);
+
+		return rest_ensure_response( $response );
+	}
+
+	/**
+	 * REST API endpoing callback function for updating a user's Firebase Auth password.
+	 *
+	 * @param \WP_REST_Request $request request object.
+	 * @throws \Exception $e Errors.
+	 */
+	public function endpoint_callback_user_reset_password( \WP_REST_Request $request ) {
+
+		$response_code           = 400;
+		$response_message        = '';
+		$user                    = null;
+
+		// TODO: Make sure that the person requesting can only change their own email.
+		// TODO: Do this via email send via SMTP or a service like Sendgrid.
+
+		try {
+			$reset_response = $this->reset_password( $this->firebase_uid, $request['password'] );
+
+			if ( isset( $reset_response['message'] ) ) {
+				$response_message = $reset_response['message'];
+			}
+
+			$response_code = 200;
+		} catch ( \Exception $e ) {
+			// TODO: Log error.
+			$response_message = $e->getMessage();
+		}
+
+		if ( is_wp_error( $request ) ) {
+			$response_code    = 400;
+			$response_message = $request->get_error_message();
+		}
+
+		$response = new \WP_REST_Response(
+			array(
+				'message' => $response_message,
+			),
+			$response_code
+		);
+
+		return rest_ensure_response( $response );
+	}
+
+	/**
+	 * REST API endpoing callback function for updating a user password.
+	 *
+	 * @param \WP_REST_Request $request request object.
+	 * @throws \Exception $e Errors.
+	 */
+	public function endpoint_callback_forgot_password( \WP_REST_Request $request ) {
+
+		$response_code           = 400;
+		$response_message        = '';
+
+		try {
+
+		} catch ( \Exception $e ) {
+			// TODO: Log error.
+		}
+
+		if ( is_wp_error( $request ) ) {
+			$response_code    = 400;
+			$response_message = $request->get_error_message();
+		}
+
+		$response = new \WP_REST_Response(
+			array(
+				'message' => $response_message,
+			),
+			$response_code
+		);
+
+		return rest_ensure_response( $response );
 	}
 }
