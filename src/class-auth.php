@@ -640,7 +640,7 @@ class Auth {
 	/**
 	 * Registering endpoints using the WordPress REST API
 	 */
-	public function register_auth_endpoints() {
+	public function register_endpoints() {
 		// The endpoint for logging a user in.
 		register_rest_route(
 			'wp-firebase-auth/v1',
@@ -675,7 +675,6 @@ class Auth {
 		);
 
 		// The endpoint for resetting a user password.
-		// TODO: Change these endpoint permissions.
 		register_rest_route(
 			'wp-firebase-auth/v1',
 			'/forgot_password',
@@ -739,6 +738,7 @@ class Auth {
 			$response_code
 		);
 
+		return rest_ensure_response( $response );
 	}
 
 	/**
