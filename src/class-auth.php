@@ -353,17 +353,21 @@ class Auth {
 	 *
 	 * @throws \Exception $e Errors.
 	 */
-	private function reset_password( $firebase_uid = null, $new_password = '' ) {
+	public function reset_password( $firebase_uid = null, $new_password = '' ) {
 		try {
 			if ( empty( $firebase_uid ) || '' === $new_password ) {
 				throw new \Exception( 'Need firebase_uid and password.', 400 );
 			}
 
 			$updated_user = $this->auth->changeUserPassword( $firebase_uid, $new_password );
+			$this->auth->enableUser( $firebase_uid );
+
 		} catch ( \Kreait\Firebase\Exception\InvalidArgumentException $e ) {
 			// TODO: Log error.
+			var_dump( $e->getMessage());
 			throw new \Exception( 'Could not update user password.', 400 );
 		}
+		var_dump('reset-password');
 
 		if ( ! empty( $updated_user ) ) {
 			return $updated_user;
