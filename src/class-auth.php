@@ -316,22 +316,39 @@ class Auth {
 	 *
 	 * @param string $email Email address for the new user.
 	 */
-	private function create_firebase_user( $email = false ) {
+	public function create_firebase_user( $email ) {
+		$response_code = 400;
+		$user          = null;
+
 		try {
 			if ( empty( $email ) ) {
 				throw new \Exception( 'Need email.', 400 );
 			}
 
 			// Create a new firebase user with a random password.
-			$new_user = $this->auth->createUserWithEmailAndPassword( $email, utf8_encode( random_bytes( 50 ) ) );
+			$user = $this->auth->createUserWithEmailAndPassword( $email, utf8_encode( random_bytes( 50 ) ) );
+
+			if ( empty( $user ) ) {
+				throw new \Exception( 'Did not create Firebase user.', 400 );
+			}
+
+			$response_code = 201;
+		} catch ( \Kreait\Firebase\Exception\Auth\EmailExists $e ) {
+			$user = $this->auth->getUserByEmail( $email );
+
+			if ( empty( $user ) ) {
+				throw new \Exception( 'Firebase user already exists, but did not get user.', 400 );
+			}
+
+			$response_code = 302;
 		} catch ( \Exception $e ) {
 			// TODO: Log error.
 		}
 
-		if ( ! empty( $new_user ) ) {
-			return $new_user;
-		}
-		return false;
+		return array(
+			'user' => $user,
+			'code' => $response_code,
+		);
 	}
 
 	/**
@@ -398,29 +415,30 @@ class Auth {
 	 * @throws \Kreait\Firebase\Exception\InvalidArgumentException Uncaught argument error.
 	 * @throws \Exception $e Errors.
 	 */
-	private function update_email( $firebase_uid = null, $new_email = '' ) {
+	public function update_email( $firebase_uid = null, $new_email = '' ) {
+		$user = false;
+
 		try {
 			if ( empty( $firebase_uid ) || '' === $new_email ) {
 				throw new \Exception( 'Need firebase_uid and email', 400 );
 			}
 
-			$updated_user = $this->auth->changeUserEmail( $firebase_uid, $new_email );
+			$user = $this->auth->changeUserEmail( $firebase_uid, $new_email );
 
 			// TODO: catch exception for if email already exists.
 			// - Find user that already exists and pass it along.
+		} catch ( \Kreait\Firebase\Exception\Auth\EmailExists $e ) {
+			// Look up firebase user.
+			$user = $this->auth->getUserByEmail( $new_email );
 
 		} catch ( \Kreait\Firebase\Exception\InvalidArgumentException $e ) {
 			// TODO: Log error.
 			throw new \Exception( 'Could not update user email.', 400 );
 		} catch ( \Exception $e ) {
-			// TODOL Log error.
+			// TODO: Log error.
 		}
 
-		if ( ! empty( $updated_user ) ) {
-			return $updated_user;
-		}
-
-		return false;
+		return $user;
 	}
 
 	/**
