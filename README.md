@@ -54,7 +54,7 @@ Request body:
 Response body:
 ```json
 {
-  "message": "",
+  "message": ""
 }
 ```
 * 200: Signed in.
@@ -68,7 +68,7 @@ POST `/wp-json/wp-firebase-auth/v1/logout`
 Response body:
 ```json
 {
-  "message": "",
+  "message": ""
 }
 ```
 * 200: Signed out.
@@ -82,7 +82,7 @@ POST `/wp-json/wp-firebase-auth/v1/reset-password`
 Response body:
 ```json
 {
-  "message": "",
+  "message": ""
 }
 ```
 * 200: Password reset.
