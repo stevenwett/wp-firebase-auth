@@ -62,7 +62,6 @@ Response body:
 
 ### Sign Out
 POST `/wp-json/wp-firebase-auth/v1/logout`
-
 * Must be authenticated.
 
 Response body:
@@ -76,7 +75,6 @@ Response body:
 
 ### Reset Password
 POST `/wp-json/wp-firebase-auth/v1/reset-password`
-
 * Must be authenticated.
 
 Response body:
