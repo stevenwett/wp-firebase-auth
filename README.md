@@ -42,6 +42,7 @@ openssl rsa -in jwtRS256.key -pubout -outform PEM -out jwtRS256.key.pub
 ### Sign In
 POST `/wp-json/wp-firebase-auth/v1/login`
 
+Request body:
 ```json
 {
   "email": "",
@@ -50,13 +51,41 @@ POST `/wp-json/wp-firebase-auth/v1/login`
 ```
 * `email` and `password` are required.
 
+Response body:
+```json
+{
+  "message": "",
+}
+```
+* 200: Signed in.
+* 400: Bad request.
+
 ### Sign Out
 POST `/wp-json/wp-firebase-auth/v1/logout`
 
 * Must be authenticated.
 
+Response body:
+```json
+{
+  "message": "",
+}
+```
+* 200: Signed out.
+* 400: Bad request.
+
 ### Reset Password
 POST `/wp-json/wp-firebase-auth/v1/reset-password`
 
 * Must be authenticated.
+
+Response body:
+```json
+{
+  "message": "",
+}
+```
+* 200: Password reset.
+* 400: Bad request.
+
 
