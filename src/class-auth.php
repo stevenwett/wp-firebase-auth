@@ -693,15 +693,15 @@ class Auth {
 		);
 
 		// The endpoint for resetting a user password.
-		register_rest_route(
-			'wp-firebase-auth/v1',
-			'/forgot_password',
-			array(
-				'methods'             => 'POST',
-				'callback'            => array( $this, 'endpoint_callback_forgot_password' ),
-				'permission_callback' => array( $this, 'endpoint_permissions_public' ),
-			)
-		);
+		// register_rest_route(
+		// 	'wp-firebase-auth/v1',
+		// 	'/forgot_password',
+		// 	array(
+		// 		'methods'             => 'POST',
+		// 		'callback'            => array( $this, 'endpoint_callback_forgot_password' ),
+		// 		'permission_callback' => array( $this, 'endpoint_permissions_public' ),
+		// 	)
+		// );
 
 	}
 

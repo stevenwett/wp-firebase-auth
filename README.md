@@ -38,3 +38,25 @@ openssl rsa -in jwtRS256.key -pubout -outform PEM -out jwtRS256.key.pub
 }
 ```
 
+## Auth Endpoints
+### Sign In
+POST `/wp-json/wp-firebase-auth/v1/login`
+
+```json
+{
+  "email": "",
+  "password": ""
+}
+```
+* `email` and `password` are required.
+
+### Sign Out
+POST `/wp-json/wp-firebase-auth/v1/logout`
+
+* Must be authenticated.
+
+### Reset Password
+POST `/wp-json/wp-firebase-auth/v1/reset-password`
+
+* Must be authenticated.
+
