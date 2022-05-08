@@ -1,5 +1,59 @@
 # WP Firebase Auth
 
+## Auth Endpoints
+### Sign In
+POST `/wp-json/wp-firebase-auth/v1/login`
+
+Request body:
+```json
+{
+  "email": "",
+  "password": ""
+}
+```
+* `email` and `password` are required.
+
+Response body:
+```json
+{
+  "message": ""
+}
+```
+
+Response codes:
+* 200: Signed in.
+* 400: Bad request.
+
+### Sign Out
+POST `/wp-json/wp-firebase-auth/v1/logout`
+* Must be authenticated.
+
+Response body:
+```json
+{
+  "message": ""
+}
+```
+
+Response codes:
+* 200: Signed out.
+* 400: Bad request.
+
+### Reset Password
+POST `/wp-json/wp-firebase-auth/v1/reset-password`
+* Must be authenticated.
+
+Response body:
+```json
+{
+  "message": ""
+}
+```
+
+Response codes:
+* 200: Password reset.
+* 400: Bad request.
+
 ## Setup
 
 * Install using composer
@@ -37,53 +91,5 @@ openssl rsa -in jwtRS256.key -pubout -outform PEM -out jwtRS256.key.pub
   "client_x509_cert_url": ""
 }
 ```
-
-## Auth Endpoints
-### Sign In
-POST `/wp-json/wp-firebase-auth/v1/login`
-
-Request body:
-```json
-{
-  "email": "",
-  "password": ""
-}
-```
-* `email` and `password` are required.
-
-Response body:
-```json
-{
-  "message": ""
-}
-```
-* 200: Signed in.
-* 400: Bad request.
-
-### Sign Out
-POST `/wp-json/wp-firebase-auth/v1/logout`
-* Must be authenticated.
-
-Response body:
-```json
-{
-  "message": ""
-}
-```
-* 200: Signed out.
-* 400: Bad request.
-
-### Reset Password
-POST `/wp-json/wp-firebase-auth/v1/reset-password`
-* Must be authenticated.
-
-Response body:
-```json
-{
-  "message": ""
-}
-```
-* 200: Password reset.
-* 400: Bad request.
 
 
